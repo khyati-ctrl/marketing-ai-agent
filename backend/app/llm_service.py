@@ -13,7 +13,7 @@ def generate_ai_text(prompt):
     
     # 3. Hand over the envelope
     response = completion(
-        model="gpt-4o",
+        model="ollama/llama3",
         messages=[{"role": "user", "content": prompt}]
     )
     
