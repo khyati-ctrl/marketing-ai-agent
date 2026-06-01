@@ -10,7 +10,7 @@ from litellm import completion, image_generation
 # ==========================================
 # 1. DATABASE SETUP (PostgreSQL)
 # ==========================================
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/marketing_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:admin123@localhost:5432/marketing_agent")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -135,7 +135,13 @@ def universal_chat(request: ChatRequest):
             # Execute localized LLM processing completely offline using LiteLLM
             response = completion(
                 model="ollama/llama3",
-                messages=[{"role": "user", "content": request.user_message}]
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are an expert marketing AI. Always format URLs as clickable markdown links, for example: [Register Here](https://www.yourwebsite.com). Never use plain text brackets like [Registration Link] without a real URL inside."
+                    },
+                    {"role": "user", "content": request.user_message}
+                ]
             )
             
             ai_reply = response.choices[0].message.content

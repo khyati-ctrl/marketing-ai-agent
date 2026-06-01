@@ -13,7 +13,7 @@ def generate_ai_text(prompt):
     
     # 3. Hand over the envelope
     response = completion(
-        model="ollama/llama3",
+        model="ollama/llama3.2",
         messages=[{"role": "user", "content": prompt}]
     )
     
