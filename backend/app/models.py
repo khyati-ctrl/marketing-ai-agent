@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, String, Float, DateTime, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, Text, String, Float, DateTime, ForeignKey, LargeBinary,JSON
 from datetime import datetime
 from sqlalchemy.orm import declarative_base
 
@@ -10,6 +10,7 @@ class Persona(Base):
     goal = Column(Text, nullable=False)
     content_produced = Column(Integer, default=0)
     insight_findings = Column(Text)
+    chat_history = Column(JSON, default=list)
 
 class Content(Base):
     __tablename__ = 'content_items'

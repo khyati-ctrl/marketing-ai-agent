@@ -2,36 +2,22 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from litellm import completion, image_generation
 
-# ==========================================
-# 1. DATABASE SETUP (PostgreSQL)
-# ==========================================
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:admin123@localhost:5432/marketing_agent")
+# Import your database session and models
+from app.database import SessionLocal, engine 
+from app.models import Base, Persona, Content, Lead, AgentRun
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-class Persona(Base):
-    __tablename__ = "personas"
-
-    id = Column(Integer, primary_key=True, index=True)
-    goal = Column(String(255), nullable=False)
-    strategy = Column(Text, nullable=True)
+# Import your enterprise agents
+from app.agents import SupervisorAgent, CoordinatorAgent, ContentAgent, InsightAgent
 
 # Create tables if they do not exist
 Base.metadata.create_all(bind=engine)
 
 # ==========================================
-# 2. FASTAPI & CORS CONFIGURATION
+# 1. FASTAPI & CORS CONFIGURATION
 # ==========================================
-app = FastAPI(title="AI Marketing Supervisor Backend")
+app = FastAPI(title="Multi-Agent Marketing Backend")
 
-# Enable CORS so your Next.js frontend (port 3000) can securely communicate with FastAPI
 app.add_middleware(CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
@@ -40,131 +26,134 @@ app.add_middleware(CORSMiddleware,
 )
 
 # ==========================================
-# 3. PYDANTIC SCHEMAS
+# 2. PYDANTIC SCHEMAS
 # ==========================================
 class ChatRequest(BaseModel):
     user_message: str
     campaign_id: int | None = None
 
 # ==========================================
-# 4. API ENDPOINTS
+# 3. API ENDPOINTS
 # ==========================================
 
 @app.get("/api/campaigns")
 def get_all_campaigns():
-    """
-    Fetches all historical campaigns from PostgreSQL to populate the React Sidebar.
-    """
     db = SessionLocal()
     try:
         all_personas = db.query(Persona).all()
-        
         formatted_campaigns = []
         for p in all_personas:
-            # Shorten the name string for clean sidebar rendering
             display_name = p.goal[:30] + "..." if len(p.goal) > 30 else p.goal
-            formatted_campaigns.append({
-                "id": p.id,
-                "name": display_name
-            })
-            
+            formatted_campaigns.append({"id": p.id, "name": display_name})
         return {"campaigns": formatted_campaigns}
     finally:
         db.close()
 
+@app.get("/api/campaigns/{campaign_id}")
+def get_campaign(campaign_id: int):
+    db = SessionLocal()
+    try:
+        camp = db.query(Persona).filter(Persona.id == campaign_id).first()
+        if not camp:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        return {
+            "id": camp.id,
+            "chat_history": camp.chat_history or []
+        }
+    finally:
+        db.close()
+
+@app.delete("/api/campaigns/{campaign_id}")
+def delete_campaign(campaign_id: int):
+    db = SessionLocal()
+    try:
+        camp = db.query(Persona).filter(Persona.id == campaign_id).first()
+        if not camp:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        db.delete(camp)
+        db.commit()
+        return {"status": "success", "message": "Campaign deleted"}
+    finally:
+        db.close()
 
 @app.post("/api/chat")
 def universal_chat(request: ChatRequest):
     """
-    Main router agent. Automatically switches between local Ollama processing 
-    and safe cloud routing depending on the user's explicit task.
+    API Gateway. Passes input to the SupervisorAgent, which routes it 
+    to the correct worker agent based on intent.
     """
-    user_message_lower = request.user_message.lower()
     db = SessionLocal()
     
     try:
-        # ---- TRACK A: IMAGE GENERATION REQUESTS ----
-        if any(keyword in user_message_lower for keyword in ["image", "poster", "visual", "banner"]):
-            api_key = os.getenv("OPENAI_API_KEY")
-            
-            # Key Safety Check: If no key or placeholder is detected, fallback gracefully without a crash
-            if not api_key or "your-real-key" in api_key:
-                return {
-                    "status": "warning",
-                    "action": "DISPLAY_TEXT",
-                    "response": (
-                        "🎨 [Local Mode Notice] I detected an image request! I would love to generate a "
-                        "high-resolution visual using DALL-E 3, but your OpenAI API key is not configured yet. "
-                        "To prevent app crashes, here is a detailed structural breakdown for your asset concept instead:\n\n"
-                        "**Visual Layout Plan:** High-contrast layout matching your current campaign theme.\n"
-                        "**Typography Style:** Clean, geometric sans-serif headings with structural subtext.\n"
-                        "**Content Focus:** Clear visual emphasis on the primary value proposition."
-                    )
-                }
-            
-            # Secure cloud execution if key exists
-            try:
-                image_response = image_generation(
-                    prompt=request.user_message,
-                    model="dall-e-3"
-                )
-                return {
-                    "status": "success",
-                    "action": "DISPLAY_IMAGE",
-                    "response": f"Generated asset successfully: {image_response.data[0].url}"
-                }
-            except Exception as e:
-                return {"status": "error", "action": "DISPLAY_TEXT", "response": f"DALL-E 3 Execution Failed: {str(e)}"}
+        active_id = request.campaign_id
+        
+        # 1. Initialize Supervisor & Determine Action
+        supervisor = SupervisorAgent()
+        action_type = supervisor.route_request(request.user_message)
+        
+        # 2. Check for New Campaigns (Force PLAN action)
+        if not active_id:
+            action_type = "PLAN"
+            new_campaign = Persona(goal=request.user_message)
+            db.add(new_campaign)
+            db.commit()
+            db.refresh(new_campaign)
+            active_id = new_campaign.id
 
-        # ---- TRACK B: TEXT PROCESSING & PLANNING (Free via Ollama) ----
+        # 3. Execute Worker Agents Based on Supervisor Output
+        ai_reply = ""
+        
+        if action_type == "PLAN":
+            coord = CoordinatorAgent()
+            ai_reply = coord.create_campaign_plan(active_id, request.user_message)
+            
+        elif action_type == "CREATE":
+            content_agent = ContentAgent()
+            caption, slug = content_agent.create_campaign_post(active_id, request.user_message)
+            ai_reply = f"**Generated Social Post:**\n\n{caption}\n\n*Tracking Slug generated: `{slug}`*"
+            
+        elif action_type == "ANALYZE":
+            insight = InsightAgent()
+            review = insight.analyze_performance(active_id)
+            ai_reply = f"**Performance Insight:**\n\n{review}"
+            
         else:
-            action_type = "TEXT_RESPONSE"
-            active_id = request.campaign_id
-            
-            # Identify if this is a brand new campaign concept initializing a PLAN phase
-            is_new_campaign = any(keyword in user_message_lower for keyword in ["start", "plan", "create a new", "run a"]) 
-            
-            if is_new_campaign or not active_id:
-                action_type = "PLAN"
-                new_campaign = Persona(goal=request.user_message)
-                db.add(new_campaign)
-                db.commit()
-                db.refresh(new_campaign)
-                active_id = new_campaign.id
+            ai_reply = "I'm sorry, I didn't understand. I can help you PLAN a campaign, CREATE content, or ANALYZE metrics."
 
-            # Execute localized LLM processing completely offline using LiteLLM
-            response = completion(
-                model="ollama/llama3",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are an expert marketing AI. Always format URLs as clickable markdown links, for example: [Register Here](https://www.yourwebsite.com). Never use plain text brackets like [Registration Link] without a real URL inside."
-                    },
-                    {"role": "user", "content": request.user_message}
-                ]
-            )
+        # 4. Telemetry: Write to AgentRun Audit Table
+        audit_log = AgentRun(
+            run_type=action_type,
+            persona_id=active_id,
+            plan=ai_reply,
+            human_decision="pending",
+            provider="ollama/llama3.2",
+            tokens_used=0 
+        )
+        db.add(audit_log)
+        
+        # 5. UI State: Update the JSON chat history for the React Frontend
+        campaign_record = db.query(Persona).filter(Persona.id == active_id).first()
+        if campaign_record:
+            current_history = list(campaign_record.chat_history) if campaign_record.chat_history else []
+            current_history.append({"role": "user", "content": request.user_message})
+            current_history.append({"role": "ai", "content": ai_reply})
             
-            ai_reply = response.choices[0].message.content
-            
-            # If we initialized a new campaign, update the database entry with the generated strategy
-            if action_type == "PLAN":
-                campaign_record = db.query(Persona).filter(Persona.id == active_id).first()
-                if campaign_record:
-                    campaign_record.strategy = ai_reply
-                    db.commit()
+            campaign_record.chat_history = current_history
+            db.commit()
 
-            return {
-                "status": "success",
-                "action": action_type,
-                "persona_id": active_id,
-                "response": ai_reply
-            }
+        # Return standardized response to Next.js
+        return {
+            "status": "success",
+            "action": action_type,
+            "persona_id": active_id,
+            "response": ai_reply
+        }
             
-    except Exception as general_error:
+    except Exception as e:
         return {
             "status": "error",
             "action": "DISPLAY_TEXT",
-            "response": f"Server processing error. Ensure Ollama is running (`ollama run llama3`). Technical logs: {str(general_error)}"
+            "response": f"System execution failed: {str(e)}"
         }
     finally:
         db.close()
