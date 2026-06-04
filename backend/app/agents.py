@@ -29,7 +29,7 @@ class ContentAgent:
     def create_campaign_post(self, persona_id: int, user_prompt: str):
         db = SessionLocal()
         
-        # 1. RAG RETRIEVAL: Gather campaign context and past history
+        # 1. Gather campaign context
         campaign = db.query(Persona).filter(Persona.id == persona_id).first()
         past_content = db.query(Content).filter(Content.persona_id == persona_id).all()
         
@@ -37,31 +37,33 @@ class ContentAgent:
         if not history_text:
             history_text = "This is the first post for this campaign."
 
-        # 2. CONTEXT INJECTION: Build the master prompt
+        # 2. Build master text prompt & generate caption
         master_prompt = f"""
         Campaign Goal: {campaign.goal}
         Campaign History: {history_text}
-        
         New Task: {user_prompt}
-        
-        Write an engaging, short social media caption. Ensure it flows logically from the history.
+        Write an engaging, short social media caption.
         """
         caption = generate_ai_text(master_prompt)
+        
+        # 3. Synchronous Image Generation
+        # Construct a visual layout prompt based on the campaign goal
+        image_prompt = f"A professional, clean digital marketing social media post banner for: {campaign.goal}. Graphic design layout, modern typography."
+        image_blob = generate_ai_image(image_prompt)
         
         # Generate tracking slug
         slug = f"promo-{str(uuid.uuid4())[:6]}"
         
-        # Save to database
+        # 4. Save both text AND image binary blob to database
         new_post = Content(
             persona_id=persona_id, 
             tracking_slug=slug, 
-            post_text=caption
+            post_text=caption,
+            image_data=image_blob  # Storing the Hugging Face output here
         )
         db.add(new_post)
         
-        # Update Persona counter
         campaign.content_produced += 1
-        
         db.commit()
         db.close()
         

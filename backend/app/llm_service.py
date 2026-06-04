@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
-from litellm import completion, image_generation
+from litellm import completion
+from huggingface_hub import InferenceClient
 
 import os
 import requests
@@ -23,20 +24,20 @@ def generate_ai_text(prompt):
     return actual_text
 
 def generate_ai_image(prompt):
-    print("Calling DALL-E 3 for image...")
+    print("Calling Hugging Face Cloud (FLUX.1)...")
     
-    # 1. Ask OpenAI for the image
-    response = image_generation(
+    # Initialize client using your token from the .env file
+    client = InferenceClient(api_key=os.environ.get("HF_TOKEN"))
+    
+    # Request image generation from the serverless API
+    image_pil = client.text_to_image(
         prompt=prompt,
-        model="dall-e-3",
-        size="1024x1024"
+        model="black-forest-labs/FLUX.1-schnell"
     )
     
-    # 2. Extract the temporary web link they send back
-    image_url = response.data[0].url
+    # Convert the Pillow Image object into raw binary bytes (BLOB data) for PostgreSQL
+    print("Converting image to binary blob...")
+    img_byte_arr = io.BytesIO()
+    image_pil.save(img_byte_arr, format='PNG')
     
-    # 3. Download the actual image file as binary (BLOB) data
-    print("Downloading image to memory...")
-    image_blob = requests.get(image_url).content
-    
-    return image_blob
+    return img_byte_arr.getvalue()

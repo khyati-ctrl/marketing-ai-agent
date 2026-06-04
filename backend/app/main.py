@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi.responses import Response
 
 # Import your database session and models
 from app.database import SessionLocal, engine 
@@ -76,6 +77,24 @@ def delete_campaign(campaign_id: int):
     finally:
         db.close()
 
+
+@app.get("/api/content/{slug}/image")
+def get_campaign_image(slug: str):
+    """
+    Fetches the binary image data for a given tracking slug 
+    and serves it back to the browser/frontend as a viewable PNG file.
+    """
+    db = SessionLocal()
+    try:
+        content_item = db.query(Content).filter(Content.tracking_slug == slug).first()
+        if not content_item or not content_item.image_data:
+            raise HTTPException(status_code=404, detail="Image not found for this slug")
+        
+        # Return the raw binary data with the correct image header
+        return Response(content_item.image_data, media_type="image/png")
+    finally:
+        db.close()
+
 @app.post("/api/chat")
 def universal_chat(request: ChatRequest):
     """
@@ -110,7 +129,7 @@ def universal_chat(request: ChatRequest):
         elif action_type == "CREATE":
             content_agent = ContentAgent()
             caption, slug = content_agent.create_campaign_post(active_id, request.user_message)
-            ai_reply = f"**Generated Social Post:**\n\n{caption}\n\n*Tracking Slug generated: `{slug}`*"
+            ai_reply = f"**Generated Social Post:**\n\n{caption}\n\n### Generated Marketing Asset:\n![Campaign Poster](http://localhost:8000/api/content/{slug}/image)\n\n*Tracking Slug generated: `{slug}`*"
             
         elif action_type == "ANALYZE":
             insight = InsightAgent()
