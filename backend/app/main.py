@@ -71,12 +71,20 @@ def delete_campaign(campaign_id: int):
         camp = db.query(Persona).filter(Persona.id == campaign_id).first()
         if not camp:
             raise HTTPException(status_code=404, detail="Campaign not found")
+            
+        # Delete associated data first!
+        db.query(Content).filter(Content.persona_id == campaign_id).delete()
+        db.query(AgentRun).filter(AgentRun.persona_id == campaign_id).delete()
+        
+        # Now delete the campaign
         db.delete(camp)
         db.commit()
-        return {"status": "success", "message": "Campaign deleted"}
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback() 
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
-
 
 @app.get("/api/content/{slug}/image")
 def get_campaign_image(slug: str):

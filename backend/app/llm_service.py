@@ -3,6 +3,7 @@ from litellm import completion
 from huggingface_hub import InferenceClient
 
 import os
+import io
 import requests
 
 # 1. Open the vault
