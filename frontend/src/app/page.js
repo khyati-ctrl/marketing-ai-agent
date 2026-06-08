@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import Auth from "./Auth";
 
 export default function Home() {
   const [campaigns, setCampaigns] = useState([]);
@@ -9,25 +10,45 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 1. Fetch all campaigns when the page loads
-useEffect(() => {
-  const fetchCampaigns = async () => {
-    try {
-      const response = await fetch("http://localhost:8000/api/campaigns");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setCampaigns(data.campaigns || []);
-    } catch (error) {
-      console.error("Failed to connect to AI Marketing Backend:", error);
-      // Optional: Set an error state here to show a UI alert instead of crashing
+  useEffect(() => {
+    // When the page loads, check if they have a keycard in their wallet
+    const token = localStorage.getItem("marketing_token");
+    if (token) {
+      setIsAuthenticated(true); // Open the gates!
     }
-  };
+  }, []);
 
-  fetchCampaigns();
-}, []);
+// 1. Fetch all campaigns when the user is securely logged in
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        // Grab the keycard from the browser's wallet
+        const token = localStorage.getItem("marketing_token");
+        
+        // Tape it to the request headers so Python can see it
+        const response = await fetch("http://localhost:8000/api/campaigns", {
+          headers: {
+            "Authorization": `Bearer ${token}` 
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setCampaigns(data.campaigns || []);
+      } catch (error) {
+        console.error("Failed to connect to AI Marketing Backend:", error);
+      }
+    };
+
+    // Only ask the backend for campaigns if the gate is open
+    if (isAuthenticated) {
+      fetchCampaigns();
+    }
+  }, [isAuthenticated]);
 
   // 2. Resets the chat for a brand new campaign
   const handleNewCampaign = () => {
@@ -123,6 +144,12 @@ useEffect(() => {
     }
   };
 
+  if (!isAuthenticated) {
+    // If they are not logged in, STOP. Only show the Auth screen.
+    return <Auth onAuthSuccess={() => setIsAuthenticated(true)} />;
+  }
+  
+  
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       
@@ -170,6 +197,24 @@ useEffect(() => {
               ))
             )}
           </div>
+        </div>
+        <div className="p-6 border-t border-gray-800 mt-auto">
+          <button 
+            onClick={() => {
+              // 1. Throw away the hotel keycard
+              localStorage.removeItem("marketing_token"); 
+              
+              // 2. Close the gate (shows the Auth screen again)
+              setIsAuthenticated(false); 
+              
+              // 3. Clear out the current chat screen so it's fresh for the next login
+              setActiveId(null);
+              setMessages([]);
+            }}
+            className="w-full text-sm text-gray-400 hover:text-white hover:bg-gray-800 py-2 px-4 rounded transition-colors flex items-center justify-center font-medium"
+          >
+            Log Out
+          </button>
         </div>
       </div>
 

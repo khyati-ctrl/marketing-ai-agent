@@ -6,7 +6,8 @@ from fastapi.responses import Response
 
 # Import your database session and models
 from app.database import SessionLocal, engine 
-from app.models import Base, Persona, Content, Lead, AgentRun
+from app.models import Base, Persona, Content, Lead, AgentRun, User
+from app.auth import get_password_hash, verify_password, create_access_token
 
 # Import your enterprise agents
 from app.agents import SupervisorAgent, CoordinatorAgent, ContentAgent, InsightAgent
@@ -15,7 +16,7 @@ from app.agents import SupervisorAgent, CoordinatorAgent, ContentAgent, InsightA
 Base.metadata.create_all(bind=engine)
 
 # ==========================================
-# 1. FASTAPI & CORS CONFIGURATION
+# FASTAPI & CORS CONFIGURATION
 # ==========================================
 app = FastAPI(title="Multi-Agent Marketing Backend")
 
@@ -27,14 +28,21 @@ app.add_middleware(CORSMiddleware,
 )
 
 # ==========================================
-# 2. PYDANTIC SCHEMAS
+# PYDANTIC SCHEMAS
 # ==========================================
 class ChatRequest(BaseModel):
     user_message: str
     campaign_id: int | None = None
 
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 # ==========================================
-# 3. API ENDPOINTS
+# API ENDPOINTS
 # ==========================================
 
 @app.get("/api/campaigns")
@@ -181,6 +189,51 @@ def universal_chat(request: ChatRequest):
             "status": "error",
             "action": "DISPLAY_TEXT",
             "response": f"System execution failed: {str(e)}"
+        }
+    finally:
+        db.close()
+
+@app.post("/api/signup")
+def create_user(user: UserCreate):
+    db = SessionLocal()
+    try:
+        # Step A: Check if someone already used this email
+        existing_user = db.query(User).filter(User.email == user.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        # Step B: Throw the password into the blender!
+        hashed_pw = get_password_hash(user.password)
+
+        # Step C: Save the brand new user to the database (saving the hash, NOT the password)
+        new_user = User(email=user.email, hashed_password=hashed_pw)
+        db.add(new_user)
+        db.commit()
+        
+        return {"status": "success", "message": "Account created successfully!"}
+    finally:
+        db.close()
+    
+@app.post("/api/login")
+def login_user(user: UserLogin):
+    db = SessionLocal()
+    try:
+        # Step A: Find the user in the database
+        db_user = db.query(User).filter(User.email == user.email).first()
+        
+        # Step B: If the user doesn't exist, or the password doesn't match the hash, block them
+        if not db_user or not verify_password(user.password, db_user.hashed_password):
+            # We give a generic error so hackers don't know if they guessed the email right
+            raise HTTPException(status_code=400, detail="Incorrect email or password")
+            
+        # Step C: They passed! Create their hotel keycard (saving their ID inside it)
+        access_token = create_access_token(data={"sub": str(db_user.id)})
+        
+        # Step D: Hand the keycard to the frontend
+        return {
+            "status": "success",
+            "access_token": access_token, 
+            "token_type": "bearer"
         }
     finally:
         db.close()

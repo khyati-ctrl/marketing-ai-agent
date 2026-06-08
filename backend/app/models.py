@@ -7,6 +7,7 @@ Base = declarative_base()
 class Persona(Base):
     __tablename__ = 'personas'
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
     goal = Column(Text, nullable=False)
     content_produced = Column(Integer, default=0)
     insight_findings = Column(Text)
@@ -43,3 +44,9 @@ class AgentRun(Base):
     human_decision = Column(String) 
     provider = Column(String) 
     tokens_used = Column(Integer, default=0)
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
