@@ -36,7 +36,7 @@ export default function Sidebar({
                     : "text-gray-300 hover:text-white hover:bg-gray-800"
                 }`}
               >
-                <span className="truncate pr-2">Campaign #{camp.id}</span>
+                <span className="truncate pr-2">{camp.name}</span>
                 
                 <button 
                   onClick={(e) => onDelete(e, camp.id)}

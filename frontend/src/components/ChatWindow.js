@@ -6,8 +6,10 @@ export default function ChatWindow({
   message, 
   setMessage, 
   isLoading, 
-  onSend 
+  onSend,
+  campaigns 
 }) {
+    const activeCampaign = campaigns?.find((c) => c.id === activeId);
   return (
     <div className="flex-1 flex flex-col h-full bg-white relative">
       
@@ -15,7 +17,7 @@ export default function ChatWindow({
       <div className="border-b px-8 py-4 flex justify-between items-center bg-white shadow-sm z-10">
         <h2 className="text-lg font-bold text-gray-800">Marketing AI Supervisor</h2>
         <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-sm font-medium">
-          {activeId ? `Campaign #${activeId}` : "New Campaign"}
+          {activeCampaign ? activeCampaign.name : "New Campaign"}
         </span>
       </div>
 

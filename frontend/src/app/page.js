@@ -26,7 +26,15 @@ export default function Home() {
           headers: { "Authorization": `Bearer ${token}` }
         });
 
+        // NEW LOGIC: If the backend says "401 Unauthorized", silently log the user out
+        if (response.status === 401) {
+          localStorage.removeItem("marketing_token");
+          setIsAuthenticated(false);
+          return; // Stop running the rest of the function
+        }
+
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const data = await response.json();
         setCampaigns(data.campaigns || []);
       } catch (error) {
@@ -155,6 +163,7 @@ export default function Home() {
         setMessage={setMessage}
         isLoading={isLoading}
         onSend={handleSend}
+        campaigns={campaigns}
       />
     </div>
   );
