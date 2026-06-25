@@ -5,19 +5,22 @@ from app.llm_service import generate_ai_text, generate_ai_image # Import your ce
 import uuid #tool for generating random strings- here used for creating unique tracking slugs
 
 class SupervisorAgent:
-    def route_request(self, user_prompt: str) -> str:
+    def route_request(self, user_prompt: str) -> list:
         routing_prompt = f"""
-        Categorize the user's request into exactly ONE of these actions:
+        Analyze the user's request and identify ALL required actions from this list:
         - PLAN: Set a goal, start a campaign, or strategize.
         - CREATE: Make a poster, write a caption, or generate content.
         - ANALYZE: Check metrics, funnel data, or review performance.
-        - UNKNOWN: Irrelevant to marketing.
         
         User Request: "{user_prompt}"
-        Respond ONLY with the exact action word.
+        Respond ONLY with a comma-separated list of the action words (e.g., PLAN, CREATE). 
+        If the request is irrelevant, output UNKNOWN.
         """
         response = generate_ai_text(routing_prompt)
-        return response.strip().upper()
+        
+        # Converts "PLAN, CREATE" into a nice Python list: ['PLAN', 'CREATE']
+        actions = [action.strip().upper() for action in response.split(',')]
+        return actions
 
 class CoordinatorAgent:
     def create_campaign_plan(self, persona_id: int, goal: str) -> str:
@@ -138,3 +141,53 @@ class InsightAgent:
             return review
         finally:
             db.close()
+
+def run_background_summarizer():
+    print("🌙 Waking up: Starting background summarizer...")
+    db = SessionLocal()
+    try:
+        campaigns = db.query(Persona).all()
+        
+        for campaign in campaigns:
+            # 1. Grab posts that haven't been summarized yet
+            new_posts = db.query(Content).filter(
+                Content.persona_id == campaign.id,
+                Content.is_summarized == False
+            ).all()
+
+            if not new_posts:
+                continue 
+
+            print(f"📝 Summarizing {len(new_posts)} new posts for campaign ID {campaign.id}...")
+
+            # 2. Mash the new posts into a single text block
+            raw_text = "\n".join([f"- {p.post_text}" for p in new_posts])
+
+            # 3. Prompt the AI to update the memory
+            prompt = f"""
+            You are a marketing AI maintaining a campaign summary.
+            
+            PREVIOUS CAMPAIGN MEMORY:
+            "{campaign.master_summary}"
+
+            NEW POSTS GENERATED TODAY:
+            {raw_text}
+
+            TASK: Update the "Previous Campaign Memory" to include the core details of the new posts. 
+            Keep it strictly under 3 sentences. Be concise.
+            """
+
+            new_summary = generate_ai_text(prompt)
+
+            # 4. Save the memory and check off the posts
+            campaign.master_summary = new_summary
+            for post in new_posts:
+                post.is_summarized = True
+
+            db.commit()
+            
+        print("✅ Background summarization complete! Going back to sleep.")
+    except Exception as e:
+        print(f"❌ Error in background summarizer: {e}")
+    finally:
+        db.close()

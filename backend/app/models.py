@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, String, Float, DateTime, ForeignKey, LargeBinary,JSON
+from sqlalchemy import Column, Integer, Text, String, Float, DateTime, ForeignKey, LargeBinary, JSON, Boolean
 from datetime import datetime
 from sqlalchemy.orm import declarative_base
 from datetime import datetime, timezone
@@ -15,6 +15,7 @@ class Persona(Base):
     chat_history = Column(JSON, default=list)
     # Use a lambda so it calculates the exact exact moment the row is created
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    master_summary = Column(String, default="This is a new campaign. No history yet.")
 
 class Content(Base):
     __tablename__ = 'content_items'
@@ -29,6 +30,7 @@ class Content(Base):
     dropped = Column(Integer, default=0)
     converted = Column(Integer, default=0)
     avg_days_to_entry = Column(Float, default=0.0)
+    is_summarized = Column(Boolean, default=False)
 
 class Lead(Base):
     __tablename__ = 'leads'

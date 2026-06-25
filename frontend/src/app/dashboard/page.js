@@ -146,6 +146,8 @@ export default function Home() {
     setActiveId(null);
     setMessages([]);
     setCampaigns([]);
+    // Force the browser to leave the dashboard!
+    router.push("/auth");
   };
 
   const handleSend = async (e) => {
