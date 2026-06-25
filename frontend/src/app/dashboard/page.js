@@ -21,6 +21,7 @@ export default function Home() {
   const [dashboardData, setDashboardData] = useState({
     total_posts: 0,
     total_clicks: 0,
+    avg_cvr: "0.0%",
     avg_engagement: "0.0%",
     campaigns: []
   });
@@ -28,7 +29,7 @@ export default function Home() {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem("marketing_token");
-      const res = await fetch("http://localhost:8000/api/campaigns/dashboard", {
+      const res = await fetch("http://127.0.0.1:8000/api/campaigns/dashboard", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -116,6 +117,14 @@ export default function Home() {
 
   const handleDelete = async (e, id) => {
     e.stopPropagation(); 
+    // 1. Pop up the native browser confirmation box
+    const isConfirmed = window.confirm("Are you sure you want to delete this campaign? This cannot be undone.");
+
+    // 2. If the user clicks "Cancel", exit the function immediately
+    if (!isConfirmed) {
+        return; 
+    }
+    // 3. If they clicked "OK", proceed with your existing delete logic
     try {
       const token = localStorage.getItem("marketing_token");
       const res = await fetch(`http://localhost:8000/api/campaigns/${id}`, { 

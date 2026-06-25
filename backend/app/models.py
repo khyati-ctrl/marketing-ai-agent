@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Text, String, Float, DateTime, ForeignKey, LargeBinary,JSON
 from datetime import datetime
 from sqlalchemy.orm import declarative_base
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -12,6 +13,8 @@ class Persona(Base):
     content_produced = Column(Integer, default=0)
     insight_findings = Column(Text)
     chat_history = Column(JSON, default=list)
+    # Use a lambda so it calculates the exact exact moment the row is created
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Content(Base):
     __tablename__ = 'content_items'

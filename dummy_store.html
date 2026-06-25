@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fake Winter Carnival Store</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        .box { background: white; padding: 30px; border-radius: 10px; max-width: 400px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; color: white; }
+        .btn-lead { background: #3b82f6; }
+        .btn-sale { background: #10b981; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>🎪 Winter Carnival Tickets</h2>
+        <p>This is a fake external website, completely separate from your React app.</p>
+        
+        <button class="btn-lead" onclick="sendPing('lead')">Sign Up for Newsletter (Lead)</button>
+        <button class="btn-sale" onclick="sendPing('convert')">Buy Ticket (Sale)</button>
+        
+        <p id="status" style="margin-top: 20px; font-weight: bold; color: gray;">Waiting for action...</p>
+    </div>
+
+    <script>
+        // You need an actual tracking slug from your database to test this.
+        // Replace 'demo-slug-123' with a real slug from your Content table!
+        const TRACKING_SLUG = "promo-91e87d"; 
+
+        async function sendPing(action) {
+            document.getElementById('status').innerText = `Sending ${action} ping to server...`;
+            
+            try {
+                // This is exactly what Shopify or a custom site would do!
+                const response = await fetch(`http://localhost:8000/api/campaigns/track/${TRACKING_SLUG}/${action}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('status').innerText = `✅ Success! Database updated.`;
+                    document.getElementById('status').style.color = "green";
+                } else {
+                    document.getElementById('status').innerText = `❌ Error: Check if slug is correct.`;
+                    document.getElementById('status').style.color = "red";
+                }
+            } catch (error) {
+                document.getElementById('status').innerText = `❌ Error connecting to backend.`;
+            }
+        }
+    </script>
+</body>
+</html>

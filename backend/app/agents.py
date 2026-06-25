@@ -92,21 +92,49 @@ class AttributionAgent:
 class InsightAgent:
     def analyze_performance(self, persona_id: int) -> str:
         db = SessionLocal()
-        campaign = db.query(Persona).filter(Persona.id == persona_id).first()
-        posts = db.query(Content).filter(Content.persona_id == persona_id).all()
-        
-        total_clicks = sum(post.clicks for post in posts)
-        
-        prompt = f"""
-        Analyze this campaign performance:
-        Goal: {campaign.goal}
-        Total Clicks Generated: {total_clicks}
-        Write a 2-sentence performance review.
-        """
-        review = generate_ai_text(prompt)
-        
-        campaign.insight_findings = review
-        db.commit()
-        db.close()
-        
-        return review
+        try:
+            campaign = db.query(Persona).filter(Persona.id == persona_id).first()
+            posts = db.query(Content).filter(Content.persona_id == persona_id).all()
+            
+            if not campaign:
+                return "Error: Campaign not found."
+
+            # 1. Grab all the new funnel metrics
+            total_clicks = sum(post.clicks for post in posts)
+            total_leads = sum(post.leads_generated for post in posts)
+            total_sales = sum(post.converted for post in posts)
+            
+            # 2. Calculate Conversion Rate (CVR)
+            cvr = (total_sales / total_clicks * 100) if total_clicks > 0 else 0
+            
+            # 3. The Upgraded Prompt
+            prompt = f"""
+            You are an expert Chief Marketing Officer evaluating an AI-generated campaign.
+            The goal of this campaign was: "{campaign.goal}"
+            
+            Here is the raw performance data from the bottom-of-funnel tracker:
+            - Total Clicks: {total_clicks}
+            - Leads Generated (Emails Captured): {total_leads}
+            - Total Sales/Conversions: {total_sales}
+            - Conversion Rate (CVR): {cvr:.1f}%
+            
+            Analyze these numbers. 
+            
+            STRICT FORMATTING RULES:
+            1. You must respond with EXACTLY three short bullet points.
+            2. Do NOT use any Markdown formatting, asterisks, or bold text.
+            3. Use plain text only.
+            
+            Draft your 3-bullet response now:
+            """
+            
+            # 4. Use your existing custom LLM function
+            review = generate_ai_text(prompt)
+            
+            # 5. Keep your existing database save logic!
+            campaign.insight_findings = review
+            db.commit()
+            
+            return review
+        finally:
+            db.close()

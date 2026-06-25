@@ -66,7 +66,7 @@ export default function Sidebar({
                 </button>
                 {!isCollapsed && (
                   <button 
-                    onClick={() => onDelete(camp.id)}
+                    onClick={(e) => onDelete(e, camp.id)}
                     className="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 transition-opacity"
                     title="Delete"
                   >

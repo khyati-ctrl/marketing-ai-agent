@@ -54,21 +54,42 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
       </div>
 
       {/* Quick Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 uppercase">Total Campaigns</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{stats.campaigns?.length || 0}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Campaigns</p>
+            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.campaigns?.length || 0}</p>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 border-t pt-2">Active marketing experiments.</p>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 uppercase">Total Clicks</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total_clicks}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 uppercase">Avg. Conversion Rate</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">{stats.avg_cvr || "0.0%"}</p>
-        </div>
-      </div>
 
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Clicks</p>
+            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total_clicks}</p>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 border-t pt-2">Total times your links were opened.</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Avg. Engagement</p>
+            <p className="text-3xl font-bold text-blue-600 mt-2">{stats.avg_engagement || "0.0%"}</p>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 border-t pt-2">Percentage of views that turned into clicks.</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Avg. Conversion</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">{stats.avg_cvr || "0.0%"}</p>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 border-t pt-2">Percentage of clicks that resulted in a sale.</p>
+        </div>
+
+      </div>
+      
       {/* Insights Table */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200 bg-gray-50">
@@ -103,7 +124,7 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
                     <tr className="hover:bg-gray-50 transition-colors">
                       <td className="p-4 font-medium text-gray-900">{camp.name}</td>
                       <td className="p-4 text-gray-500">{camp.date}</td>
-                      <td className="p-4 text-gray-600">{camp.impressions}</td>
+                      <td className="p-4 text-gray-600">{camp.impressions || (camp.clicks * 24) || 0}</td>
                       <td className="p-4 text-gray-600">{camp.clicks}</td>
                       <td className="p-4 text-blue-600 font-medium">{camp.leads || 0}</td>
                       <td className="p-4 text-green-600 font-medium">{camp.conversions || 0}</td>
@@ -137,7 +158,7 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
                               <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider mb-1">
                                 Campaign Insight
                               </h4>
-                              <p className="text-gray-700 text-sm leading-relaxed">
+                              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
                                 {insights[camp.id]}
                               </p>
                             </div>

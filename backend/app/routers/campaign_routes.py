@@ -5,6 +5,7 @@ from app.database import SessionLocal
 from app.models import Persona, User, Content, AgentRun 
 from app.auth import get_current_user
 from app.agents import InsightAgent
+from datetime import datetime, timezone
 
 # 1. Initialize the Router
 router = APIRouter(
@@ -12,11 +13,22 @@ router = APIRouter(
     tags=["Campaigns"]
 )
 
+@router.get("/debug/slugs")
+def get_valid_slugs():
+    db = SessionLocal()
+    try:
+        # Grab the first 5 posts in the database
+        posts = db.query(Content).limit(5).all()
+        return {"valid_slugs_you_can_use": [post.tracking_slug for post in posts]}
+    finally:
+        db.close()
+
 # --- Pydantic Models for the Dashboard ---
 class CampaignStat(BaseModel):
     id: str
     name: str
     date: str
+    impressions: int
     clicks: int
     leads: int       
     conversions: int  
@@ -24,9 +36,9 @@ class CampaignStat(BaseModel):
 class DashboardMetrics(BaseModel):
     total_posts: int
     total_clicks: int
+    avg_cvr: str
     avg_engagement: str
     campaigns: List[CampaignStat]
-
 
 
 # 2. Get Dashboard Metrics
@@ -41,6 +53,7 @@ def get_dashboard_data(current_user: User = Depends(get_current_user)):
         total_posts = 0
         total_clicks = 0
         total_impressions = 0
+        total_conversions = 0 # <-- FIXED 1: Added this variable
         campaigns_data = []
 
         for persona in personas:
@@ -52,45 +65,61 @@ def get_dashboard_data(current_user: User = Depends(get_current_user)):
             # Mock impressions based on clicks for now
             camp_impressions = camp_clicks * 24 if camp_clicks > 0 else 0
             
+            # 1. Calculate the totals from the posts
+            camp_leads = sum(post.leads_generated for post in posts)
+            camp_conversions = sum(post.converted for post in posts)
+
+            # <-- FIXED 2: Actually add the campaign totals to the global totals
             total_posts += camp_posts_count
             total_clicks += camp_clicks
             total_impressions += camp_impressions
+            total_conversions += camp_conversions 
 
             # Shorten goal for the table name
             camp_name = persona.goal[:40] + "..." if len(persona.goal) > 40 else persona.goal
 
-            # 1. Calculate the totals from the posts
-            camp_leads = sum(post.leads_generated for post in posts)
-            camp_conversions = sum(post.converted for post in posts)
+            # Format the database timestamp into "Month Day, Year" (e.g., "Oct 24, 2024")
+            # The getattr() is a safety net in case the column is missing
+            if getattr(persona, 'created_at', None):
+                display_date = persona.created_at.strftime("%b %d, %Y")
+            else:
+                # The updated Python 3.12+ standard
+                display_date = datetime.now(timezone.utc).strftime("%b %d, %Y")
 
             # 2. Append to your dashboard data
             campaigns_data.append(CampaignStat(
                 id=str(persona.id),
                 name=camp_name,
-                date="Recent", 
+                date=display_date,
                 impressions=camp_impressions,
                 clicks=camp_clicks,
-                leads=camp_leads,             
+                leads=camp_leads,            
                 conversions=camp_conversions
-                
             ))
 
-        # Calculate Average Engagement
+        # 3. Calculate Average Conversion Rate (CVR)
+        if total_clicks > 0:
+            cvr_rate = (total_conversions / total_clicks) * 100
+            avg_cvr = f"{cvr_rate:.1f}%"
+        else:
+            avg_cvr = "0.0%"
+
+        # 4. Calculate Average Engagement
         if total_impressions > 0:
             engagement_rate = (total_clicks / total_impressions) * 100
-            avg_engagement = f"+{engagement_rate:.1f}%"
+            avg_engagement = f"{engagement_rate:.1f}%"
         else:
             avg_engagement = "0.0%"
 
         return DashboardMetrics(
             total_posts=total_posts,
             total_clicks=total_clicks,
-            avg_engagement=avg_engagement,
+            avg_cvr=avg_cvr, 
+            avg_engagement=avg_engagement, 
             campaigns=campaigns_data
         )
     finally:
         db.close()
-
 
 # 3. Get ALL Campaigns (For the Sidebar)
 @router.get("/")
