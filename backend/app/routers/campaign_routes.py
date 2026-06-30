@@ -137,24 +137,66 @@ def get_all_campaigns(current_user: User = Depends(get_current_user)):
     finally:
         db.close()
 
+# --- ADD THIS NEW POST ROUTE ---
+@router.post("/")
+def create_new_campaign(campaign_data: dict, current_user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        # Your Persona model uses 'goal' to store the name/prompt
+        campaign_name = campaign_data.get("name", "New Campaign")
+        
+        new_campaign = Persona(
+            goal=campaign_name, 
+            user_id=current_user.id,
+            chat_history=[] # Initialize with an empty history
+        )
+        db.add(new_campaign)
+        db.commit()
+        db.refresh(new_campaign)
+        
+        # Return exactly what React is expecting
+        return {"id": new_campaign.id, "name": new_campaign.goal}
+    finally:
+        db.close()
+# -------------------------------
 
 # 4. Get a SPECIFIC Campaign
 @router.get("/{campaign_id}")
 def get_campaign(campaign_id: int, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
+
     try:
-        campaign = db.query(Persona).filter(Persona.id == campaign_id).first()
-        
+        campaign = db.query(Persona).filter(
+            Persona.id == campaign_id
+        ).first()
+
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
-            
+
         if campaign.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to view this campaign")
-            
-        return {"chat_history": campaign.chat_history or []}
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Fetch every content item belonging to this campaign
+        posts = db.query(Content).filter(
+            Content.persona_id == campaign_id
+        ).all()
+
+        total_clicks = sum(post.clicks for post in posts)
+        total_leads = sum(post.leads_generated for post in posts)
+        total_conversions = sum(post.converted for post in posts)
+
+        impressions = total_clicks * 24 if total_clicks > 0 else 0
+
+        return {
+            "chat_history": campaign.chat_history or [],
+            "clicks": total_clicks,
+            "leads": total_leads,
+            "conversions": total_conversions,
+            "impressions": impressions
+        }
+
     finally:
         db.close()
-
 
 # 5. DELETE a Campaign
 @router.delete("/{campaign_id}")
@@ -222,5 +264,32 @@ def track_conversion(slug: str):
             db.commit()
             return {"status": "success", "conversions": post.converted}
         raise HTTPException(status_code=404, detail="Post not found")
+    finally:
+        db.close()
+
+@router.post("/track/{slug}/click")
+def track_click(slug: str):
+    db = SessionLocal()
+
+    try:
+        post = db.query(Content).filter(
+            Content.tracking_slug == slug
+        ).first()
+
+        if not post:
+            raise HTTPException(
+                status_code=404,
+                detail="Post not found"
+            )
+
+        post.clicks += 1
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "clicks": post.clicks
+        }
+
     finally:
         db.close()

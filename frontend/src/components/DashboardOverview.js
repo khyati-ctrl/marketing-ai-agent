@@ -90,6 +90,7 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
 
       </div>
       
+
       {/* Insights Table */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200 bg-gray-50">
@@ -173,6 +174,7 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
           </table>
         </div>
       </div>
+      
       
     </div>
   );

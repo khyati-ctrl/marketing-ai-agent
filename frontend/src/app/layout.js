@@ -1,5 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { CampaignProvider } from "@/context/CampaignContext";
+import Sidebar from "@/components/sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +25,12 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <CampaignProvider>
+          <div className="flex h-screen">
+             <Sidebar /> {/* Sidebar stays here for EVERY page */}
+             <main className="flex-1 overflow-hidden">{children}</main>
+          </div>
+        </CampaignProvider>
       </body>
     </html>
   );
