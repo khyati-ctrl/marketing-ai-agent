@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/config"; // <-- Import the config here
 
 const CampaignContext = createContext();
 
@@ -22,14 +23,15 @@ export function CampaignProvider({ children }) {
         if (!isConfirmed) return;
 
         const token = localStorage.getItem("marketing_token");
-        await fetch(`http://127.0.0.1:8000/api/campaigns/${id}`, {
+        
+        // FIX 1: Using API_BASE_URL here
+        await fetch(`${API_BASE_URL}/api/campaigns/${id}`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${token}` }
         });
         
         setCampaigns((prev) => prev.filter((c) => c.id !== id));
         
-        // Optional: If they delete the campaign they are currently looking at, send them home
         if (window.location.pathname === `/campaign/${id}`) {
             router.push("/dashboard");
         }
@@ -46,7 +48,8 @@ export function CampaignProvider({ children }) {
             if (!token) return;
 
             try {
-                const res = await fetch("http://127.0.0.1:8000/api/campaigns", {
+                // FIX 2: Using API_BASE_URL here
+                const res = await fetch(`${API_BASE_URL}/api/campaigns`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.ok) {

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react"; 
+import { API_BASE_URL } from "@/config";
 
 export default function DashboardOverview({ stats, onNewCampaign }) {
   // We use an object to store insights by campaign ID: { 1: "Insight text...", 2: "Insight text..." }
@@ -19,7 +20,7 @@ export default function DashboardOverview({ stats, onNewCampaign }) {
     setAnalyzingId(campId);
     try {
       const token = localStorage.getItem("marketing_token");
-      const res = await fetch(`http://localhost:8000/api/campaigns/${campId}/insights`, {
+      const res = await fetch(`${API_BASE_URL}/api/campaigns/${campId}/insights`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

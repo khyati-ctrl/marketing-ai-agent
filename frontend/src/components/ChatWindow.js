@@ -4,6 +4,7 @@ import { useCampaign } from "@/context/CampaignContext";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import FunnelChart from "./FunnelChart";
+import { API_BASE_URL } from "@/config";
 
 export default function ChatWindow({ activeId, onSend }) {
   // Pulling state from the Global Context
@@ -39,7 +40,7 @@ export default function ChatWindow({ activeId, onSend }) {
 
     const fetchHistory = async () => {
       const token = localStorage.getItem("marketing_token");
-      const res = await fetch(`http://127.0.0.1:8000/api/campaigns/${activeId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/campaigns/${activeId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -61,7 +62,7 @@ export default function ChatWindow({ activeId, onSend }) {
       try {
         const token = localStorage.getItem("marketing_token");
         const res = await fetch(
-          `http://127.0.0.1:8000/api/campaigns/${activeId}`,
+          `${API_BASE_URL}/api/campaigns/${activeId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

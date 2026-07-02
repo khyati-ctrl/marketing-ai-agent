@@ -3,6 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import ChatWindow from "@/components/ChatWindow";
 import { useCampaign } from "@/context/CampaignContext";
 import { useEffect } from "react";
+import { API_BASE_URL } from "@/config";
 
 export default function CampaignPage() {
   const params = useParams();
@@ -36,7 +37,7 @@ export default function CampaignPage() {
         payload.campaign_id = parseInt(activeId);
       }
 
-      const response = await fetch("http://127.0.0.1:8000/api/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
