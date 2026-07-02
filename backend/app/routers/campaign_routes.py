@@ -5,6 +5,7 @@ from app.database import SessionLocal
 from app.models import Persona, User, Content, AgentRun 
 from app.auth import get_current_user
 from app.agents import InsightAgent
+from app.agents import refine_goal
 from datetime import datetime, timezone
 
 # 1. Initialize the Router
@@ -138,23 +139,27 @@ def get_all_campaigns(current_user: User = Depends(get_current_user)):
         db.close()
 
 # --- ADD THIS NEW POST ROUTE ---
+# --- UPDATED POST ROUTE WITH REFINER ---
 @router.post("/")
 def create_new_campaign(campaign_data: dict, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        # Your Persona model uses 'goal' to store the name/prompt
-        campaign_name = campaign_data.get("name", "New Campaign")
+        # 1. Get the raw input
+        raw_goal = campaign_data.get("name", "New Campaign")
         
+        # 2. RUN THE REFINER (Clean the command into a subject)
+        clean_goal = refine_goal(raw_goal)
+        
+        # 3. Save the CLEAN goal
         new_campaign = Persona(
-            goal=campaign_name, 
+            goal=clean_goal, 
             user_id=current_user.id,
-            chat_history=[] # Initialize with an empty history
+            chat_history=[]
         )
         db.add(new_campaign)
         db.commit()
         db.refresh(new_campaign)
         
-        # Return exactly what React is expecting
         return {"id": new_campaign.id, "name": new_campaign.goal}
     finally:
         db.close()

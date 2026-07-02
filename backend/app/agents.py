@@ -4,6 +4,24 @@ from app.llm_service import generate_ai_text, generate_ai_image # Import your ce
 
 import uuid #tool for generating random strings- here used for creating unique tracking slugs
 
+
+def extract_goal_topic(user_prompt: str) -> str:
+    """
+    Takes a user command (e.g., 'Make a marketing plan for my gym')
+    and returns just the business topic (e.g., 'My gym business').
+    """
+    prompt = f"""
+    You are a data cleaning assistant. 
+    User Input: "{user_prompt}"
+    
+    Extract the core business topic or product from the user input.
+    - If input is "Make a plan for my coffee shop", return "Organic Coffee Shop"
+    - If input is "I need a strategy for my crypto app", return "Crypto App"
+    
+    Respond ONLY with the topic name. No quotes, no extra words.
+    """
+    return generate_ai_text(prompt).strip()
+
 class SupervisorAgent:
     def route_request(self, user_prompt: str) -> list:
         routing_prompt = f"""
