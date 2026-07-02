@@ -21,6 +21,23 @@ def refine_goal(user_input: str) -> str:
     """
     return generate_ai_text(prompt).strip()
 
+def generate_image_prompt(goal: str, task: str) -> str:
+    """
+    Acts as an Art Director to create a specific visual prompt 
+    based on the goal and the specific task.
+    """
+    prompt = f"""
+    You are an Art Director. Create a single descriptive prompt for an AI image generator (FLUX.1).
+    Goal: {goal}
+    Current Task: {task}
+    
+    If the task is 'Day 1 of Hackathon', the image should reflect Day 1.
+    If the task is 'Registration', the image should be about signing up.
+    
+    Return ONLY the image prompt description. Keep it under 30 words.
+    """
+    return generate_ai_text(prompt)
+
 class SupervisorAgent:
     def route_request(self, user_prompt: str) -> list:
         routing_prompt = f"""
@@ -79,10 +96,14 @@ class ContentAgent:
         """
         caption = generate_ai_text(master_prompt)
         
-        # 3. Synchronous Image Generation
-        # Construct a visual layout prompt based on the campaign goal
-        image_prompt = f"A professional, clean digital marketing social media post banner for: {campaign.goal}. Graphic design layout, modern typography."
-        image_blob = generate_ai_image(image_prompt)
+        # 3. Dynamic Image Generation
+        # Instead of static text, we ask the AI to describe the perfect image
+        visual_description = generate_image_prompt(campaign.goal, user_prompt)
+        
+        # Now we add the style modifiers to the AI's description
+        final_image_prompt = f"{visual_description}. Professional, clean, social media marketing aesthetic, modern typography."
+        
+        image_blob = generate_ai_image(final_image_prompt)
         
         # Generate tracking slug
         slug = f"promo-{str(uuid.uuid4())[:6]}"
