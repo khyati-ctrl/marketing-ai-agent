@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { API_BASE_URL } from "@/config";
 
 export default function Auth({ onAuthSuccess }) {
   // 1. React 'Memory' (State)
@@ -14,7 +15,7 @@ export default function Auth({ onAuthSuccess }) {
     
     // Step A: Decide which door to knock on (Login or Signup)
     const endpoint = isLogin ? "/api/login" : "/api/signup";
-    const url = `http://localhost:8000${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
 
     try {
       // Step B: Send the email and password to Python
