@@ -7,22 +7,33 @@ import uuid #tool for generating random strings- here used for creating unique t
 class SupervisorAgent:
     def route_request(self, user_prompt: str) -> list:
         routing_prompt = f"""
-        You are a strict API routing agent. Analyze the user's request and select the SINGLE most relevant action from this list:
-        - PLAN: (Use ONLY when the user wants to set a goal, start a campaign, or strategize)
-        - CREATE: (Use ONLY when the user wants to make a poster, write a caption, or generate content)
-        - ANALYZE: (Use ONLY when the user wants to check metrics, funnel data, or review performance)
+        Analyze the user's request and classify it into EXACTLY ONE of these categories:
+        - PLAN: Setting goals, starting a campaign, or strategizing.
+        - CREATE: Making a poster, writing a caption, or generating content.
+        - ANALYZE: Checking metrics, funnel data, or reviewing performance.
         
         User Request: "{user_prompt}"
         
-        Respond with EXACTLY ONE word from the list above (PLAN, CREATE, or ANALYZE). 
-        Do not output multiple words unless the user explicitly asks to do two distinct tasks in one sentence. 
-        If the request is irrelevant, output UNKNOWN.
+        Respond with ONLY ONE word (PLAN, CREATE, or ANALYZE).
         """
-        response = generate_ai_text(routing_prompt)
         
-        # Converts "PLAN" into a nice Python list: ['PLAN']
-        actions = [action.strip().upper() for action in response.split(',')]
-        return actions
+        # 1. Get the raw text from the AI
+        raw_response = generate_ai_text(routing_prompt).upper()
+        
+        # 2. Define our strict list of allowed actions
+        valid_actions = ["PLAN", "CREATE", "ANALYZE"]
+        
+        # 3. Scan the AI's response for our allowed words
+        found_actions = [action for action in valid_actions if action in raw_response]
+        
+        # 4. The Guardrail: No matter what the AI said, ONLY return the first valid action
+        if found_actions:
+            print(f"🤖 Supervisor routed to: {found_actions[0]}")
+            return [found_actions[0]]
+            
+        # Fallback if the AI says something completely unreadable
+        print("🤖 Supervisor could not route request. Defaulting to UNKNOWN.")
+        return ["UNKNOWN"]
 
 class CoordinatorAgent:
     def create_campaign_plan(self, persona_id: int, goal: str) -> str:
