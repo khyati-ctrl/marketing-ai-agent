@@ -1,11 +1,16 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # This imports the blueprint you just wrote in models.py
 from app.models import Base 
 
+# Load variables from .env
+load_dotenv()
 
-DATABASE_URL = "postgresql://postgres:admin123@localhost:5432/marketing_agent"
+# Pull the URL securely from the environment
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # This creates the "bridge" to your database
 engine = create_engine(DATABASE_URL)

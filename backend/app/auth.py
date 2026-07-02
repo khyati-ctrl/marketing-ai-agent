@@ -1,6 +1,8 @@
+import os
 import bcrypt
 from datetime import datetime, timedelta
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database import SessionLocal
@@ -21,8 +23,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         hashed_password.encode('utf-8')
     )
 
+load_dotenv() # Load variables
+
+# Pull the key securely
+SECRET_KEY = os.getenv("SECRET_KEY")
 # 3. Hotel Keycard (JWT)
-SECRET_KEY = "my_super_secret_marketing_key" 
 ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
