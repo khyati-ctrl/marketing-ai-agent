@@ -11,11 +11,11 @@ load_dotenv()
 
 # 2. Build the switchboard function
 def generate_ai_text(prompt):
-    print("Calling OpenAI...")
+    print("Calling Groq...")
     
     # 3. Hand over the envelope
     response = completion(
-        model="ollama/llama3.2",
+        model="groq/llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}]
     )
     
