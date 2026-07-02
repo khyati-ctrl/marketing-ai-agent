@@ -5,20 +5,19 @@ from app.llm_service import generate_ai_text, generate_ai_image # Import your ce
 import uuid #tool for generating random strings- here used for creating unique tracking slugs
 
 
-def extract_goal_topic(user_prompt: str) -> str:
+def refine_goal(user_input: str) -> str:
     """
-    Takes a user command (e.g., 'Make a marketing plan for my gym')
-    and returns just the business topic (e.g., 'My gym business').
+    Acts as a Refiner Agent to strip commands and extract only the 
+    core business topic from a user's prompt.
     """
     prompt = f"""
-    You are a data cleaning assistant. 
-    User Input: "{user_prompt}"
+    You are a data assistant. Your job is to extract the subject of a business request.
+    If the user says "Make a marketing plan for my cafe", you return "Cafe business".
+    If the user says "I need a strategy for my crypto app", you return "Crypto app".
     
-    Extract the core business topic or product from the user input.
-    - If input is "Make a plan for my coffee shop", return "Organic Coffee Shop"
-    - If input is "I need a strategy for my crypto app", return "Crypto App"
+    User Input: "{user_input}"
     
-    Respond ONLY with the topic name. No quotes, no extra words.
+    Return ONLY the subject. No sentences, no commands.
     """
     return generate_ai_text(prompt).strip()
 
