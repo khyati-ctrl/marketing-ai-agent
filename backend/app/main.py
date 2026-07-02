@@ -41,6 +41,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",   # Your React App
         "http://127.0.0.1:5500",   # Your Dummy Store (Live Server)
+        "https://marketing-ai-agent-three.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
