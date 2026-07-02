@@ -7,18 +7,20 @@ import uuid #tool for generating random strings- here used for creating unique t
 class SupervisorAgent:
     def route_request(self, user_prompt: str) -> list:
         routing_prompt = f"""
-        Analyze the user's request and identify ALL required actions from this list:
-        - PLAN: Set a goal, start a campaign, or strategize.
-        - CREATE: Make a poster, write a caption, or generate content.
-        - ANALYZE: Check metrics, funnel data, or review performance.
+        You are a strict API routing agent. Analyze the user's request and select the SINGLE most relevant action from this list:
+        - PLAN: (Use ONLY when the user wants to set a goal, start a campaign, or strategize)
+        - CREATE: (Use ONLY when the user wants to make a poster, write a caption, or generate content)
+        - ANALYZE: (Use ONLY when the user wants to check metrics, funnel data, or review performance)
         
         User Request: "{user_prompt}"
-        Respond ONLY with a comma-separated list of the action words (e.g., PLAN, CREATE). 
+        
+        Respond with EXACTLY ONE word from the list above (PLAN, CREATE, or ANALYZE). 
+        Do not output multiple words unless the user explicitly asks to do two distinct tasks in one sentence. 
         If the request is irrelevant, output UNKNOWN.
         """
         response = generate_ai_text(routing_prompt)
         
-        # Converts "PLAN, CREATE" into a nice Python list: ['PLAN', 'CREATE']
+        # Converts "PLAN" into a nice Python list: ['PLAN']
         actions = [action.strip().upper() for action in response.split(',')]
         return actions
 
