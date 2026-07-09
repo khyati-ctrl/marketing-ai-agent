@@ -6,7 +6,7 @@ from app.models import Persona, Content, AgentRun, User
 from app.auth import get_current_user
 import os
 
-BASE_URL = os.getenv("NEXT_PUBLIC_API_URL", "https://your-render-app-url.onrender.com")
+BASE_URL = os.getenv("BACKEND_URL")
 
 # Import your enterprise agents
 from app.agents import SupervisorAgent, CoordinatorAgent, AttributionAgent, ContentAgent, InsightAgent
@@ -22,7 +22,7 @@ class ChatRequest(BaseModel):
     campaign_id: int | None = None
 
 # 3. Click Tracking Redirection
-@router.get("{BASE_URL}/go/{slug}")
+@router.get("/go/{slug}")
 def handle_click(slug: str):
     tracker = AttributionAgent()
     tracker.process_click(slug)
@@ -30,7 +30,7 @@ def handle_click(slug: str):
     return RedirectResponse(url="https://www.google.com")
 
 # 4. Fetch Generated Images
-@router.get("{BASE_URL}/api/content/{slug}/image")
+@router.get("/api/content/{slug}/image")
 def get_campaign_image(slug: str):
     db = SessionLocal()
     try:
@@ -43,7 +43,7 @@ def get_campaign_image(slug: str):
         db.close()
 
 # 5. Main AI Agent Gateway
-@router.post("{BASE_URL}/api/chat")
+@router.post("/api/chat")
 def universal_chat(request: ChatRequest, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     
@@ -79,7 +79,17 @@ def universal_chat(request: ChatRequest, current_user: User = Depends(get_curren
         if "CREATE" in actions:
             content_agent = ContentAgent()
             caption, slug = content_agent.create_campaign_post(active_id, request.user_message)
-            response_parts.append(f"### Generated Social Post\n{caption}\n\n![Campaign Poster](http://localhost:8000/api/content/{slug}/image)\n\n**Share this tracking link:** [http://localhost:8000/go/{slug}](http://localhost:8000/go/{slug})")
+            image_url = f"{BASE_URL}/api/content/{slug}/image"
+            tracking_url = f"{BASE_URL}/go/{slug}"
+            response_parts.append(
+                f"""
+                ### Generated Social Post
+                {caption}
+                ![Campaign Poster]({image_url})
+                **Share this tracking link:**
+                [{tracking_url}]({tracking_url})
+                """
+                )
             
         if "ANALYZE" in actions:
             insight = InsightAgent()
