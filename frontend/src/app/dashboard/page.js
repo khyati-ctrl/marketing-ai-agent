@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardOverview from "../../components/DashboardOverview";
 import { useCampaign } from "@/context/CampaignContext"; // Import Context
+import { API_BASE_URL } from "@/config";
+
 
 export default function DashboardPage() {
   // 1. Pull the create function and campaigns from context
@@ -34,7 +36,7 @@ export default function DashboardPage() {
         const token = localStorage.getItem("marketing_token");
         if (!token) return;
 
-        const res = await fetch("http://127.0.0.1:8000/api/campaigns/dashboard", {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/dashboard`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
 
