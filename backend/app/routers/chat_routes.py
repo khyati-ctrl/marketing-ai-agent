@@ -4,6 +4,9 @@ from pydantic import BaseModel
 from app.database import SessionLocal
 from app.models import Persona, Content, AgentRun, User
 from app.auth import get_current_user
+import os
+
+BASE_URL = os.getenv("NEXT_PUBLIC_API_URL", "https://your-render-app-url.onrender.com")
 
 # Import your enterprise agents
 from app.agents import SupervisorAgent, CoordinatorAgent, AttributionAgent, ContentAgent, InsightAgent
@@ -19,7 +22,7 @@ class ChatRequest(BaseModel):
     campaign_id: int | None = None
 
 # 3. Click Tracking Redirection
-@router.get("/go/{slug}")
+@router.get("{BASE_URL}/go/{slug}")
 def handle_click(slug: str):
     tracker = AttributionAgent()
     tracker.process_click(slug)
@@ -27,7 +30,7 @@ def handle_click(slug: str):
     return RedirectResponse(url="https://www.google.com")
 
 # 4. Fetch Generated Images
-@router.get("/api/content/{slug}/image")
+@router.get("{BASE_URL}/api/content/{slug}/image")
 def get_campaign_image(slug: str):
     db = SessionLocal()
     try:
@@ -40,7 +43,7 @@ def get_campaign_image(slug: str):
         db.close()
 
 # 5. Main AI Agent Gateway
-@router.post("/api/chat")
+@router.post("{BASE_URL}/api/chat")
 def universal_chat(request: ChatRequest, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     
