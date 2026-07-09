@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from typing import List
 from app.database import SessionLocal
@@ -24,7 +24,7 @@ def get_valid_slugs():
     finally:
         db.close()
 
-# --- Pydantic Models for the Dashboard ---
+# --- Pydantic Models ---
 class CampaignStat(BaseModel):
     id: str
     name: str
@@ -41,24 +41,40 @@ class DashboardMetrics(BaseModel):
     avg_engagement: str
     campaigns: List[CampaignStat]
 
+class CampaignCreate(BaseModel):
+    name: str
 
 # 2. Get Dashboard Metrics
 # CRITICAL: This must be above /{campaign_id} so FastAPI doesn't confuse "dashboard" for an ID
 @router.get("/dashboard", response_model=DashboardMetrics)
-def get_dashboard_data(current_user: User = Depends(get_current_user)):
+def get_dashboard_data(response: Response, current_user: User = Depends(get_current_user)):
+    # Force the browser/Vercel to never cache this result (fixes the 304 stale data issue)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    
     db = SessionLocal()
     try:
         # Fetch ONLY the current user's campaigns
         personas = db.query(Persona).filter(Persona.user_id == current_user.id).all()
+        persona_ids = [p.id for p in personas]
+        
+        # FIX: Prevent the N+1 problem by fetching all related content in a single query
+        all_posts = []
+        if persona_ids:
+            all_posts = db.query(Content).filter(Content.persona_id.in_(persona_ids)).all()
+            
+        # Group the posts by persona_id for quick lookups
+        posts_by_persona = {pid: [] for pid in persona_ids}
+        for post in all_posts:
+            posts_by_persona[post.persona_id].append(post)
         
         total_posts = 0
         total_clicks = 0
         total_impressions = 0
-        total_conversions = 0 # <-- FIXED 1: Added this variable
+        total_conversions = 0 
         campaigns_data = []
 
         for persona in personas:
-            posts = db.query(Content).filter(Content.persona_id == persona.id).all()
+            posts = posts_by_persona.get(persona.id, [])
             
             camp_posts_count = len(posts)
             camp_clicks = sum(post.clicks for post in posts) 
@@ -66,11 +82,11 @@ def get_dashboard_data(current_user: User = Depends(get_current_user)):
             # Mock impressions based on clicks for now
             camp_impressions = camp_clicks * 24 if camp_clicks > 0 else 0
             
-            # 1. Calculate the totals from the posts
+            # Calculate the totals from the posts
             camp_leads = sum(post.leads_generated for post in posts)
             camp_conversions = sum(post.converted for post in posts)
 
-            # <-- FIXED 2: Actually add the campaign totals to the global totals
+            # Add the campaign totals to the global totals
             total_posts += camp_posts_count
             total_clicks += camp_clicks
             total_impressions += camp_impressions
@@ -79,15 +95,13 @@ def get_dashboard_data(current_user: User = Depends(get_current_user)):
             # Shorten goal for the table name
             camp_name = persona.goal[:40] + "..." if len(persona.goal) > 40 else persona.goal
 
-            # Format the database timestamp into "Month Day, Year" (e.g., "Oct 24, 2024")
-            # The getattr() is a safety net in case the column is missing
+            # Format the database timestamp into "Month Day, Year"
             if getattr(persona, 'created_at', None):
                 display_date = persona.created_at.strftime("%b %d, %Y")
             else:
-                # The updated Python 3.12+ standard
                 display_date = datetime.now(timezone.utc).strftime("%b %d, %Y")
 
-            # 2. Append to your dashboard data
+            # Append to your dashboard data
             campaigns_data.append(CampaignStat(
                 id=str(persona.id),
                 name=camp_name,
@@ -98,14 +112,14 @@ def get_dashboard_data(current_user: User = Depends(get_current_user)):
                 conversions=camp_conversions
             ))
 
-        # 3. Calculate Average Conversion Rate (CVR)
+        # Calculate Average Conversion Rate (CVR)
         if total_clicks > 0:
             cvr_rate = (total_conversions / total_clicks) * 100
             avg_cvr = f"{cvr_rate:.1f}%"
         else:
             avg_cvr = "0.0%"
 
-        # 4. Calculate Average Engagement
+        # Calculate Average Engagement
         if total_impressions > 0:
             engagement_rate = (total_clicks / total_impressions) * 100
             avg_engagement = f"{engagement_rate:.1f}%"
@@ -138,14 +152,13 @@ def get_all_campaigns(current_user: User = Depends(get_current_user)):
     finally:
         db.close()
 
-# --- ADD THIS NEW POST ROUTE ---
-# --- UPDATED POST ROUTE WITH REFINER ---
+# --- UPDATED POST ROUTE WITH REFINER AND PYDANTIC VALIDATION ---
 @router.post("/")
-def create_new_campaign(campaign_data: dict, current_user: User = Depends(get_current_user)):
+def create_new_campaign(data: CampaignCreate, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        # 1. Get the raw input
-        raw_goal = campaign_data.get("name", "New Campaign")
+        # 1. Get the raw input safely from Pydantic
+        raw_goal = data.name
         
         # 2. RUN THE REFINER (Clean the command into a subject)
         clean_goal = refine_goal(raw_goal)
@@ -161,9 +174,11 @@ def create_new_campaign(campaign_data: dict, current_user: User = Depends(get_cu
         db.refresh(new_campaign)
         
         return {"id": new_campaign.id, "name": new_campaign.goal}
+    except Exception as e:
+        print(f"Error creating campaign: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while creating campaign")
     finally:
         db.close()
-# -------------------------------
 
 # 4. Get a SPECIFIC Campaign
 @router.get("/{campaign_id}")
@@ -226,6 +241,7 @@ def delete_campaign(campaign_id: int, current_user: User = Depends(get_current_u
         return {"status": "success", "message": "Campaign deleted"}
     except Exception as e:
         db.rollback() 
+        print(f"Error deleting campaign ID {campaign_id}: {e}") # Log error for Vercel troubleshooting
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
@@ -241,7 +257,7 @@ def get_campaign_insights(campaign_id: int):
         
         return {"insight": insight_text}
     except Exception as e:
-        # This will catch any future errors and print them nicely
+        print(f"Error generating insights for campaign ID {campaign_id}: {e}") # Log error for Vercel troubleshooting
         raise HTTPException(status_code=500, detail=str(e))
     
 # 1. Track a Lead (e.g., User submitted an email form)
