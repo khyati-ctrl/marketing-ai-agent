@@ -82,9 +82,7 @@ def universal_chat(request: ChatRequest, current_user: User = Depends(get_curren
             image_url = f"{BASE_URL}/api/content/{slug}/image"
             tracking_url = f"{BASE_URL}/go/{slug}"
             response_parts.append(
-                f"""
-                ### Generated Social Post
-                {caption}
+                f"""{caption}
                 ![Campaign Poster]({image_url})
                 **Share this tracking link:**
                 [{tracking_url}]({tracking_url})
