@@ -31,9 +31,8 @@ def generate_image_prompt(goal: str, task: str) -> str:
     Goal: {goal}
     Current Task: {task}
     
-    If the task is 'Day 1 of Hackathon', the image should reflect Day 1.
-    If the task is 'Registration', the image should be about signing up.
-    
+    Read the current task, look at the goal and extract only the parts related to the current task from the goal.
+    Give a single, concise description of the image that would best represent this task in a social media marketing context.
     Return ONLY the image prompt description. Keep it under 30 words.
     """
     return generate_ai_text(prompt)
