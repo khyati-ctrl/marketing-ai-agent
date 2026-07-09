@@ -93,21 +93,21 @@ export default function ChatWindow({ activeId, onSend }) {
       : "0.0";
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0f172a] transition-colors duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-        <h2 className="font-semibold text-gray-800">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111827] transition-colors duration-300">
+        <h2 className="font-semibold text-gray-800 dark:text-white">
           {activeCampaign ? activeCampaign.name : "New Campaign"}
         </h2>
 
         {activeId && (
-          <div className="flex bg-gray-200 p-1 rounded-lg">
+          <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
             <button
               onClick={() => setViewMode("chat")}
               className={`px-4 py-1 text-sm font-medium rounded-md transition-colors ${
                 viewMode === "chat"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
               }`}
             >
               Chat
@@ -116,8 +116,8 @@ export default function ChatWindow({ activeId, onSend }) {
               onClick={() => setViewMode("analytics")}
               className={`px-4 py-1 text-sm font-medium rounded-md transition-colors ${
                 viewMode === "analytics"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
               }`}
             >
               Analytics
@@ -130,7 +130,7 @@ export default function ChatWindow({ activeId, onSend }) {
         <>
           <div className="flex-1 overflow-y-auto p-8 space-y-6">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-400 mt-20">
+              <div className="text-center text-gray-400 dark:text-gray-500 mt-20">
                 Start by describing your marketing goals below.
               </div>
             ) : (
@@ -145,7 +145,7 @@ export default function ChatWindow({ activeId, onSend }) {
                     className={`max-w-3xl rounded-2xl px-6 py-4 text-sm ${
                       msg.role === "user"
                         ? "bg-blue-600 text-white rounded-br-none"
-                        : "bg-gray-50 text-gray-800 border border-gray-200 rounded-bl-none shadow-sm"
+                        : "bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-none shadow-sm"
                     }`}
                   >
                     {msg.role === "ai" ? (
@@ -156,7 +156,7 @@ export default function ChatWindow({ activeId, onSend }) {
                               {...props}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 underline hover:text-blue-800"
+                              className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300"
                             />
                           ),
                         }}
@@ -173,25 +173,25 @@ export default function ChatWindow({ activeId, onSend }) {
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-50 text-gray-500 border border-gray-200 rounded-2xl rounded-bl-none px-6 py-4">
+                <div className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-none px-6 py-4">
                   Thinking...
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-6 bg-white border-t">
+          <div className="p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <form onSubmit={onSend} className="flex items-center space-x-4">
               <input
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Describe your campaign..."
-                className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400"
+                className="flex-1 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               />
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl transition-colors"
               >
                 Send
               </button>
@@ -199,9 +199,9 @@ export default function ChatWindow({ activeId, onSend }) {
           </div>
         </>
       ) : (
-        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-8 bg-gray-50 dark:bg-[#0f172a] transition-colors duration-300">
           <div className="max-w-6xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-800 mb-8">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
               Campaign Performance
             </h3>
             {isLoadingStats ? (
@@ -211,27 +211,27 @@ export default function ChatWindow({ activeId, onSend }) {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Impressions</p>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Impressions</p>
                     <p className="text-4xl font-bold text-amber-500 mt-3">{campaignStats.impressions}</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Clicks</p>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Clicks</p>
                     <p className="text-4xl font-bold text-blue-600 mt-3">{campaignStats.total_clicks}</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Leads</p>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Leads</p>
                     <p className="text-4xl font-bold text-purple-600 mt-3">{campaignStats.total_leads}</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Sales</p>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Sales</p>
                     <p className="text-4xl font-bold text-green-600 mt-3">{campaignStats.total_sales}</p>
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Conversion Rate</p>
-                  <p className="text-5xl font-bold text-gray-900 mt-3">{conversionRate}%</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 mb-8">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Conversion Rate</p>
+                  <p className="text-5xl font-bold text-gray-900 dark:text-white mt-3">{conversionRate}%</p>
                 </div>
                 
                 <FunnelChart stats={campaignStats} />

@@ -65,19 +65,21 @@ export default function DashboardPage() {
   // 4. Show loading state if waiting for data or auth
   if (isLoading) {
     return (
-      <div className="h-full w-full bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500 text-lg">Loading workspace...</div>
+      <div className="h-full w-full bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-colors duration-300">
+        <div className="text-gray-500 dark:text-gray-300 text-lg">
+          Loading workspace...
+        </div>
       </div>
     );
   }
 
   // 5. Render ONLY the Dashboard Overview
   return (
-    <div className="flex-1 h-full bg-gray-50 overflow-y-auto relative font-sans">
-      <DashboardOverview 
+    <div className="flex-1 h-full bg-gray-50 dark:bg-slate-800 overflow-y-auto relative font-sans transition-colors duration-300">
+      <DashboardOverview
         stats={dashboardData}
-        campaigns={campaigns} 
-        onNewCampaign={createNewCampaign} // <-- This connects the button to your Context!
+        campaigns={campaigns}
+        onNewCampaign={createNewCampaign}
       />
     </div>
   );
