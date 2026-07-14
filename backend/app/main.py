@@ -13,17 +13,26 @@ from app.routers import auth_routes, campaign_routes, chat_routes
 # Import the function you just wrote
 from app.agents import run_background_summarizer 
 
-# This runs exactly once when the server boots
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("🚀 App starting...")
+    print("🚀 Starting scheduler...")
+
     scheduler = BackgroundScheduler()
-    # SET TO 1 MINUTE FOR TESTING
-    scheduler.add_job(run_background_summarizer, 'interval', hours=24)
+
+    scheduler.add_job(
+        run_background_summarizer,
+        "interval",
+        hours=24
+    )
+
     scheduler.start()
-    
-    yield # Your server runs here while yielding
-    
-    # This safely shuts down the clock when you press Ctrl+C
+
+    print("✅ Scheduler started!")
+
+    yield
+
+    print("🛑 Shutting down scheduler...")
     scheduler.shutdown()
 
 # Hook the lifespan to your app & Initialize the FastAPI App
