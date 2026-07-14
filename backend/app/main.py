@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         run_background_summarizer,
         "interval",
-        hours=24
+        minutes=1
     )
 
     scheduler.start()
